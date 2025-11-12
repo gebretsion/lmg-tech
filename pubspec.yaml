@@ -1,4 +1,4 @@
-name: rental_app
+name: lmg_app
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -30,37 +30,45 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.2   # Match Flutter SDK version
   cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1
   dio: ^5.9.0
   shared_preferences: ^2.5.3
   google_fonts: ^6.3.0
-  intl: ^0.20.2
+  http: ^1.5.0
+  image_picker: ^1.2.0
+  mime: ^2.0.0
+  http_parser: ^4.1.2
+  flutter_dotenv: ^5.1.0
+  file_picker: ^8.1.2
+  cached_network_image: ^3.2.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
+  flutter_launcher_icons: ^0.10.0
   flutter_lints: ^5.0.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
+  flutter:
+    sdk: flutter
+  http: ^1.0.0
+  shared_preferences: ^2.1.1
 
-# The following section is specific to Flutter packages.
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+
 flutter:
-
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/lang/en.json
+    - assets/lang/am.json
+    - assets/lang/om.json
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:
