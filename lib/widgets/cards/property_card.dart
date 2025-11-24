@@ -29,9 +29,9 @@ class PropertyCard extends StatelessWidget {
           ],
         ),
         onTap: onTap,
-        trailing: property.imageUrls != null && property.imageUrls!.isNotEmpty
+        trailing: property.imageUrls.isNotEmpty
             ? Image.network(
-                property.imageUrls!.first,
+                property.imageUrls.first,
                 width: 60,
                 height: 60,
                 fit: BoxFit.cover,

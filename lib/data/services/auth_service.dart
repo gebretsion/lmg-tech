@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lmg_app/data/models/user.dart'; // Import the User model
 import '../../core/config/app_config.dart';
+
+const String _userKey = 'current_user';
 
 class AuthService {
   // ===================== REGISTER =====================
@@ -27,7 +30,7 @@ class AuthService {
 
     if (profilePicture != null) {
       request.files.add(await http.MultipartFile.fromPath(
-        'profilePicture',
+        'profilePictureFile', // Ensure this matches the backend's expected field name
         profilePicture.path,
       ));
     }
@@ -62,6 +65,14 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', data['token']);
       }
+      // Save user data
+      if (data['user'] != null) {
+        await saveUser(User.fromJson(data['user']));
+      }
+      // Save user data
+      if (data['user'] != null) {
+        await saveUser(User.fromJson(data['user']));
+      }
 
       return data;
     } else {
@@ -75,32 +86,25 @@ class AuthService {
     return prefs.getString('jwt_token');
   }
 
-  // ===================== GET PROFILE =====================
-  static Future<Map<String, dynamic>> getProfile() async {
-    final token = await getToken(); // automatically retrieve saved token
-    if (token == null) {
-      throw Exception('No token found. Please login first.');
-    }
-
-    final uri = Uri.parse('${AppConfig.baseUrl}/customer/profile');
-    final res = await http.get(
-      uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return jsonDecode(res.body);
-    } else {
-      throw Exception('Failed to fetch profile: ${res.body}');
-    }
+  // ===================== SAVE USER DATA =====================
+  static Future<void> saveUser(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userKey, jsonEncode(user.toJson()));
   }
 
+  // ===================== GET USER DATA =====================
+  static Future<User?> getUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString(_userKey);
+    if (userJson != null) {
+      return User.fromJson(jsonDecode(userJson));
+    }
+    return null;
+  }
   // ===================== LOGOUT =====================
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token'); // remove token on logout
+    await prefs.remove(_userKey); // remove user data on logout
   }
 }

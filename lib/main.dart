@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lmg_app/core/localization/localization.dart';
-import 'modules/intro/intro_page.dart';
+import 'package:lmg_app/core/theme/app_theme.dart';
+import 'package:lmg_app/modules/home/home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +45,9 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Property Booking App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system, 
 
       // ✅ Localization setup
       supportedLocales: AppLocalizations.supportedLocales,
@@ -66,7 +69,7 @@ class _MyAppState extends State<MyApp> {
         return const Locale('en');
       },
 
-      home: IntroPage(setLocale: setLocale),
+      home: const HomePage(),
     );
   }
 }

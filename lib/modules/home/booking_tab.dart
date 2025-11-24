@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/services/customer_ops_service.dart';
-import 'package:lmg_app/modules/booking/create_booking_page.dart';
+import '../booking/my_booking_page.dart';
+import '../booking/all_booking_page.dart';
 
 class BookingTab extends StatefulWidget {
   const BookingTab({super.key});
@@ -10,13 +10,25 @@ class BookingTab extends StatefulWidget {
 }
 
 class _BookingTabState extends State<BookingTab> with SingleTickerProviderStateMixin {
+  final GlobalKey<MyBookingsPageState> _myBookingsKey = GlobalKey<MyBookingsPageState>();
+  final GlobalKey<AllBookingsPageState> _allBookingsKey = GlobalKey<AllBookingsPageState>();
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        if (_tabController.index == 0) {
+          _myBookingsKey.currentState?.loadBookings();
+        } else if (_tabController.index == 1) {
+          _allBookingsKey.currentState?.loadBookings();
+        }
+      }
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +38,6 @@ class _BookingTabState extends State<BookingTab> with SingleTickerProviderStateM
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Create'),
             Tab(text: 'My Bookings'),
             Tab(text: 'All Bookings'),
           ],
@@ -34,122 +45,11 @@ class _BookingTabState extends State<BookingTab> with SingleTickerProviderStateM
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          CreateBookingPage(), // token handled internally
-          MyBookingsPage(),    // token handled internally
-          AllBookingsPage(),   // token handled internally
+        children: [
+          MyBookingsPage(key: _myBookingsKey),
+          AllBookingsPage(key: _allBookingsKey),
         ],
       ),
     );
-  }
-}
-
-// ================= MyBookingsPage =================
-class MyBookingsPage extends StatefulWidget {
-  const MyBookingsPage({super.key});
-
-  @override
-  State<MyBookingsPage> createState() => _MyBookingsPageState();
-}
-
-class _MyBookingsPageState extends State<MyBookingsPage>
-    with AutomaticKeepAliveClientMixin {
-  List bookings = [];
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchBookings();
-  }
-
-  void fetchBookings() async {
-    setState(() => loading = true);
-    try {
-      final res = await CustomerOpsService.getMyBookings(); // token fetched internally
-      setState(() => bookings = res['bookings'] ?? []);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    } finally {
-      setState(() => loading = false);
-    }
-  }
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    return loading
-        ? const Center(child: CircularProgressIndicator())
-        : ListView.builder(
-            itemCount: bookings.length,
-            itemBuilder: (context, index) {
-              final booking = bookings[index];
-              return Card(
-                child: ListTile(
-                  title: Text(booking['assetName']),
-                  subtitle: Text('From ${booking['startDate']} To ${booking['endDate']}'),
-                ),
-              );
-            },
-          );
-  }
-}
-
-// ================= AllBookingsPage =================
-class AllBookingsPage extends StatefulWidget {
-  const AllBookingsPage({super.key});
-
-  @override
-  State<AllBookingsPage> createState() => _AllBookingsPageState();
-}
-
-class _AllBookingsPageState extends State<AllBookingsPage>
-    with AutomaticKeepAliveClientMixin {
-  List bookings = [];
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchAllBookings();
-  }
-
-  void fetchAllBookings() async {
-    setState(() => loading = true);
-    try {
-      final res = await CustomerOpsService.getAllBookings(); // token fetched internally
-      setState(() => bookings = res['bookings'] ?? []);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    } finally {
-      setState(() => loading = false);
-    }
-  }
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    return loading
-        ? const Center(child: CircularProgressIndicator())
-        : ListView.builder(
-            itemCount: bookings.length,
-            itemBuilder: (context, index) {
-              final booking = bookings[index];
-              return Card(
-                child: ListTile(
-                  title: Text(booking['propertyName'] ?? booking['assetName']),
-                  subtitle: Text('From ${booking['startDate']} To ${booking['endDate']}'),
-                ),
-              );
-            },
-          );
   }
 }

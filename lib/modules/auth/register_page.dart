@@ -2,10 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../data/services/auth_service.dart';
-import '../home/home_page.dart';
+import '../../data/models/property.dart';
+import '../booking/property_booking_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  final Property? property;
+  const RegisterPage({super.key, this.property});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -45,14 +48,25 @@ class _RegisterPageState extends State<RegisterPage> {
         address: _addressController.text,
         profilePicture: profileImage,
       );
+          final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('email', _emailController.text.trim());
+    await prefs.setString('password', _passwordController.text.trim());
+
 
       // Automatically saved token in AuthService, no need to pass to HomePage
       final token = await AuthService.getToken();
       if (token != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
+        if (!mounted) return;
+        if (widget.property != null) {
+          // If a property was passed, replace the register page with the booking page.
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => PropertyBookingPage(property: widget.property!)),
+          );
+        } else {
+          // Pop the page and return true to signal success.
+          Navigator.pop(context, true);
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? 'Registration failed')),

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lmg_app/data/models/property.dart';
+import 'package:lmg_app/modules/booking/property_booking_page.dart';
 import '../../data/services/auth_service.dart';
-import '../home/home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final Property? property;
+  const LoginPage({super.key, this.property});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -14,6 +17,23 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool loading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadCredentials();
+  }
+
+  Future<void> _loadCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('email');
+    final password = prefs.getString('password');
+    if (email != null && password != null) {
+      _emailController.text = email;
+      _passwordController.text = password;
+    }
+  }
+
+
  Future<void> login() async {
   if (!mounted) return;
   setState(() => loading = true);
@@ -23,15 +43,23 @@ class _LoginPageState extends State<LoginPage> {
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
+        final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('email', _emailController.text.trim());
+    await prefs.setString('password', _passwordController.text.trim());
+
     final token = await AuthService.getToken();
     if (token != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted) return;
+       if (!mounted) return;
+      if (widget.property != null) {
+        // If a property was passed, replace the login page with the booking page.
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          MaterialPageRoute(builder: (_) => PropertyBookingPage(property: widget.property!)),
         );
-      });
+      } else {
+        // Pop the page and return true to signal success.
+        Navigator.pop(context, true);
+      }
     } else {
       debugPrint('Login failed: ${res['message']}');
       if (mounted) {
@@ -84,10 +112,13 @@ class _LoginPageState extends State<LoginPage> {
             ElevatedButton(
               onPressed: loading ? null : login,
               child: loading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                        SizedBox(width: 8),
+                        Text('Logging in...'),
+                      ],
                     )
                   : const Text('Login'),
             ),

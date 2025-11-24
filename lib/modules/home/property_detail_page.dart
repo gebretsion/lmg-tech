@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:lmg_app/data/services/auth_service.dart';
+import 'package:lmg_app/core/localization/localization.dart';
+import 'package:lmg_app/modules/auth/login_page.dart';
+import 'package:lmg_app/modules/auth/register_page.dart';
 import '../../data/models/property.dart';
-
+import '../booking/property_booking_page.dart';
 class PropertyDetailPage extends StatelessWidget {
   final Property property;
 
@@ -8,9 +12,56 @@ class PropertyDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(property.name),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: Text(localizations.translate('book_now')),
+          onPressed: () async {
+            final token = await AuthService.getToken();
+            if (token == null) {
+              // User is not logged in, show login/register dialog
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text(localizations.translate('authentication_required')),
+                    content: Text(localizations.translate('auth_required_message')),
+                    actions: <Widget>[
+                      TextButton(
+                        child: Text(localizations.translate('register')),
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(property: property)));
+                        },
+                      ),
+                      TextButton(
+                        child: Text(localizations.translate('login')),
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPage(property: property)));
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            } else {
+              // User is logged in, proceed to booking
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => PropertyBookingPage(property: property)),
+              );
+            }
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -46,49 +97,53 @@ class PropertyDetailPage extends StatelessWidget {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow('Category:', property.category),
-            _buildDetailRow('Status:', property.status),
-            _buildDetailRow('Price Unit:', property.priceUnit),
-            _buildDetailRow('Number of Units:', property.numberOfProperty.toString()),
+            _buildDetailRow(localizations.translate('category'), property.category),
+            _buildDetailRow(localizations.translate('status'), property.status),
+            _buildDetailRow(localizations.translate('price_unit'), property.priceUnit.toString()),
+            _buildDetailRow(localizations.translate('number_of_units'), property.numberOfProperty.toString()),
             const SizedBox(height: 16),
-            const Text(
-              'Rental Prices:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              localizations.translate('rental_prices'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            _buildDetailRow('Per Hour:', '${property.rentalPrice['perHour'] ?? 'N/A'}'),
-            _buildDetailRow('Per Day:', '${property.rentalPrice['perDay'] ?? 'N/A'}'),
-            _buildDetailRow('Per Month:', '${property.rentalPrice['perMonth'] ?? 'N/A'}'),
-            _buildDetailRow('Per Year:', '${property.rentalPrice['perYear'] ?? 'N/A'}'),
+            _buildDetailRow(localizations.translate('per_hour'), '${property.rentalPrice['perHour'] ?? 'N/A'}'),
+            _buildDetailRow(localizations.translate('per_day'), '${property.rentalPrice['perDay'] ?? 'N/A'}'),
+            _buildDetailRow(localizations.translate('per_month'), '${property.rentalPrice['perMonth'] ?? 'N/A'}'),
+            _buildDetailRow(localizations.translate('per_year'), '${property.rentalPrice['perYear'] ?? 'N/A'}'),
             const SizedBox(height: 16),
-            const Text(
-              'Merchant Details:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              localizations.translate('merchant_details'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            _buildDetailRow('Name:', property.merchant['name'] ?? 'N/A'),
-            _buildDetailRow('Business Name:', property.merchant['businessName'] ?? 'N/A'),
-            _buildDetailRow('Email:', property.merchant['email'] ?? 'N/A'),
-            _buildDetailRow('Phone:', property.merchant['phone'] ?? 'N/A'),
-            _buildDetailRow('Account Number:', property.merchant['acountnumber'] ?? 'N/A'),
+            _buildDetailRow(localizations.translate('name'), property.merchant['name'] ?? 'N/A'),
+            _buildDetailRow(localizations.translate('business_name'), property.merchant['businessName'] ?? 'N/A'),
+            _buildDetailRow(localizations.translate('email'), property.merchant['email'] ?? 'N/A'),
+            _buildDetailRow(localizations.translate('phone'), (property.merchant['phone'] ?? 'N/A').toString()),
+            _buildDetailRow(localizations.translate('account_number'), (property.merchant['acountnumber'] ?? 'N/A').toString()),
             const SizedBox(height: 16),
-            const Text(
-              'Associated Bookings:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              localizations.translate('associated_bookings'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             if (property.bookings.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text('No current bookings for this property.'),
-              )
+              Text(localizations.translate('no_current_bookings'))
             else
-              ...property.bookings.map((booking) {
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListTile(
-                    title: Text('Booking from ${booking.startDate.split('T')[0]} to ${booking.endDate.split('T')[0]}'),
-                    subtitle: Text('Status: ${booking.status} | Units: ${booking.numberOfProperty}'),
-                  ),
-                );
-              }).toList(),
+              // Use a non-scrolling ListView.builder for efficiency
+              ListView.builder(
+                shrinkWrap: true, // Important for nesting in a SingleChildScrollView
+                physics: const NeverScrollableScrollPhysics(), // Disable its own scrolling
+                itemCount: property.bookings.length,
+                itemBuilder: (context, index) {
+                  final booking = property.bookings[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: ListTile(
+                      title: Text(localizations.translate('booking_from_to').replaceAll('{startDate}', booking.startDate.split('T')[0]).replaceAll('{endDate}', booking.endDate.split('T')[0])),
+                      subtitle: Text(localizations.translate('booking_status_units').replaceAll('{status}', booking.status).replaceAll('{units}', booking.numberOfProperty.toString())),
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),

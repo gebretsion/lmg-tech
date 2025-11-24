@@ -56,4 +56,19 @@ class Property {
             .map((b) => BookingInfo.fromJson(b))
             .toList(),
       );
+
+  Map<String, dynamic> toJson() => {
+        '_id': id,
+        'name': name,
+        'description': description,
+        'category': category,
+        'priceUnit': priceUnit,
+        'rentalPrice': rentalPrice,
+        'numberOfProperty': numberOfProperty,
+        'status': status,
+        'imageUrls': imageUrls,
+        'merchant': merchant,
+        // Note: bookings are not included here as they are not needed by the form.
+        // 'bookings': bookings.map((b) => b.toJson()).toList(),
+      };
 }

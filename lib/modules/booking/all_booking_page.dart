@@ -1,37 +1,43 @@
 import 'package:flutter/material.dart';
-import '../../data/services/booking_service.dart';
+import '../../data/services/customer_ops_service.dart';
 
 class AllBookingsPage extends StatefulWidget {
   const AllBookingsPage({super.key});
 
   @override
-  State<AllBookingsPage> createState() => _AllBookingsPageState();
+  AllBookingsPageState createState() => AllBookingsPageState();
 }
 
-class _AllBookingsPageState extends State<AllBookingsPage> {
+class AllBookingsPageState extends State<AllBookingsPage> {
   List bookings = [];
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadBookings();
+    loadBookings();
   }
 
-  void _loadBookings() async {
+  void loadBookings() async {
   setState(() => loading = true);
 
   try {
-    final res = await BookingService.getAllBookings();
-    setState(() {
-      bookings = res['bookings'] ?? [];
-    });
+    final res = await CustomerOpsService.getAllBookings();
+    if (mounted) {
+      setState(() {
+        bookings = res['bookings'] ?? [];
+      });
+    }
   } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   } finally {
-    setState(() => loading = false);
+    if (mounted) {
+      setState(() => loading = false);
+    }
   }
 }
 
@@ -47,8 +53,17 @@ class _AllBookingsPageState extends State<AllBookingsPage> {
               itemBuilder: (context, i) {
                 final booking = bookings[i];
                 return ListTile(
-                  title: Text(booking['propertyName']),
-                  subtitle: Text('Status: ${booking['paymentProofPath'] != "no payment proven" ? "Paid" : "Pending"} | Start Date: ${booking['startDate']} | End Date: ${booking['endDate']}'),
+                  leading: (booking['imageUrls'] as List).isNotEmpty
+                      ? Image.network(
+                          (booking['imageUrls'] as List).first,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.image_not_supported),
+                  title: Text(booking['propertyName'] ?? 'N/A'),
+                  subtitle: Text('Status: ${booking['paymentProofPath'] != "no payment proven" ? "Paid" : "Pending"}\nBooked: ${booking['startDate'].split('T')[0]} to ${booking['endDate'].split('T')[0]}'),
+                  isThreeLine: true,
                 );
               },
             ),
