@@ -44,8 +44,8 @@ class BookingDetailPage extends StatelessWidget {
             _buildDetailRow('Booking ID:', booking.bookingId),
             _buildDetailRow('Category:', booking.category),
             _buildDetailRow('Number of Units:', booking.numberOfProperty.toString()),
-            _buildDetailRow('Start Date:', booking.startDate.toLocal().toString().split(' ')[0]),
-            _buildDetailRow('End Date:', booking.endDate.toLocal().toString().split(' ')[0]),
+            _buildDetailRow('Start Date & Time:', booking.startDate.toLocal().toString().substring(0, 16)),
+            _buildDetailRow('End Date & Time:', booking.endDate.toLocal().toString().substring(0, 16)),
             _buildDetailRow('Total Price:', '\$${booking.totalPrice.toStringAsFixed(2)}'),
             _buildDetailRow('Status:', booking.status),
             if (booking.paymentProofPath != null && booking.paymentProofPath!.isNotEmpty)

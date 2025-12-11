@@ -6,24 +6,24 @@ class AppTheme {
   AppTheme._();
 
   // Define a seed color for the color scheme
-  static const _seedColor = Color(0xFF0D47A1); // A deep blue
+  static const _seedColor = Color.fromARGB(255, 84, 138, 220); // A deep blue
 
   // Define light theme colors
   static final _lightColorScheme = ColorScheme.fromSeed(
-    seedColor: _seedColor,
+    seedColor: const Color.fromARGB(255, 68, 132, 228),
     brightness: Brightness.light,
-    primary: _seedColor,
+    primary: const Color.fromARGB(255, 98, 152, 233),
     background: const Color(0xFFF7F9FC),
     surface: Colors.white,
   );
 
   // Define dark theme colors
   static final _darkColorScheme = ColorScheme.fromSeed(
-    seedColor: _seedColor,
+    seedColor: const Color.fromARGB(255, 91, 129, 186),
     brightness: Brightness.dark,
     primary: const Color(0xFF64B5F6), // A lighter blue for dark mode
-    background: const Color(0xFF121212),
-    surface: const Color(0xFF1E1E1E),
+    background: const Color.fromARGB(255, 43, 41, 41),
+    surface: const Color.fromARGB(255, 38, 37, 37),
   );
 
   /// Returns the light theme data.

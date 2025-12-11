@@ -1,75 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:lmg_app/core/config/language_provider.dart';
+import 'package:lmg_app/core/config/theme_provider.dart';
 import 'package:lmg_app/core/localization/localization.dart';
 import 'package:lmg_app/core/theme/app_theme.dart';
 import 'package:lmg_app/modules/home/home_page.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load saved language code or default to English
-  final prefs = await SharedPreferences.getInstance();
-  final savedCode = prefs.getString('language_code') ?? 'en';
-  runApp(MyApp(initialLocale: Locale(savedCode)));
+  runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
-  final Locale initialLocale;
-  const MyApp({super.key, required this.initialLocale});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late Locale _locale;
-
-  @override
-  void initState() {
-    super.initState();
-    _locale = widget.initialLocale;
-  }
-
-  void setLocale(Locale locale) async {
-    if (_locale == locale) return;
-    setState(() {
-      _locale = locale;
-    });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language_code', locale.languageCode);
-  }
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Property Booking App',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, 
-
-      // ✅ Localization setup
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
+      child: Consumer2<LanguageProvider, ThemeProvider>(
+        builder: (context, languageProvider, themeProvider, child) {
+          return MaterialApp(
+            key: UniqueKey(),
+            debugShowCheckedModeBanner: false,
+            title: 'Property Booking App',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
 
-      locale: _locale,
+            // Set the locale directly from the provider.
+            locale: languageProvider.currentLocale,
 
-      // 🔹 Fallback for Flutter widgets (Material/Cupertino) if Oromo
-      localeResolutionCallback: (locale, supportedLocales) {
-        if (_locale.languageCode == 'om') return const Locale('en'); // fallback
-        for (var supported in supportedLocales) {
-          if (supported.languageCode == _locale.languageCode) return supported;
-        }
-        return const Locale('en');
-      },
-
-      home: const HomePage(),
+            // 1. Your app's delegate for your JSON files.
+            // 2. Flutter's delegates for built-in widget translations.
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            // Declare ONLY the locales that Flutter's delegates support.
+            // This makes Flutter fall back to 'en' for its own widgets when the app locale is 'om'.
+            supportedLocales: const [Locale('en', ''), Locale('am', '')],
+            home: const HomePage(),
+          );
+        },
+      ),
     );
   }
 }

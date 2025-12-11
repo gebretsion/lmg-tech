@@ -3,6 +3,7 @@ import 'package:lmg_app/data/services/auth_service.dart';
 import 'package:lmg_app/core/localization/localization.dart';
 import 'package:lmg_app/modules/auth/login_page.dart';
 import 'package:lmg_app/modules/auth/register_page.dart';
+import 'package:lmg_app/modules/home/home_page.dart';
 import '../../data/models/property.dart';
 import '../booking/property_booking_page.dart';
 class PropertyDetailPage extends StatelessWidget {
@@ -16,52 +17,6 @@ class PropertyDetailPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(property.name),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: Text(localizations.translate('book_now')),
-          onPressed: () async {
-            final token = await AuthService.getToken();
-            if (token == null) {
-              // User is not logged in, show login/register dialog
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text(localizations.translate('authentication_required')),
-                    content: Text(localizations.translate('auth_required_message')),
-                    actions: <Widget>[
-                      TextButton(
-                        child: Text(localizations.translate('register')),
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(property: property)));
-                        },
-                      ),
-                      TextButton(
-                        child: Text(localizations.translate('login')),
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPage(property: property)));
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            } else {
-              // User is logged in, proceed to booking
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => PropertyBookingPage(property: property)),
-              );
-            }
-          },
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

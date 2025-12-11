@@ -1,144 +1,321 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import '../../data/services/customer_ops_service.dart';
+import '../../data/services/auth_service.dart';
 import '../../core/localization/localization.dart';
 import '../../data/models/property.dart';
-import 'property_detail_page.dart'; // Import the new detail page
+import 'property_detail_page.dart';
+import '../booking/property_booking_page.dart';
+import '../auth/login_page.dart';
+import '../auth/register_page.dart';
+import '../../widgets/cards/property_card.dart';
+import 'package:provider/provider.dart';
+import '../../core/config/language_provider.dart';
 
 class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+  final Future<void> Function()? onLoginTapped;
+
+  const HomeTab({super.key, this.onLoginTapped});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
 }
 
 class _HomeTabState extends State<HomeTab> {
+  final _searchController = TextEditingController();
   final List<Map<String, dynamic>> categories = [
     {'name': 'EventSupply', 'icon': Icons.celebration},
     {'name': 'ConstructionEquipment', 'icon': Icons.construction},
     {'name': 'HealthcareMedical', 'icon': Icons.medical_services},
     {'name': 'Other', 'icon': Icons.more_horiz},
   ];
-  String? selectedCategory;
 
+  String? selectedCategory;
   bool loading = false;
   List<Property> properties = [];
+  bool _isLoggedIn = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final token = await AuthService.getToken();
+    setState(() => _isLoggedIn = token != null);
+  }
 
   void searchProperties(String category) async {
     setState(() => loading = true);
 
     try {
-      final res = await CustomerOpsService.getPropertiesByCategory(category); // Use guest-accessible method
-      debugPrint('API Response for $category: $res'); // Added for debugging
-      final List<dynamic> propsList = res['properties'] ?? [];
-      // Filter out any non-Map items before mapping to Property objects
-      final List<Property> parsedProperties = propsList
+      final res = await CustomerOpsService.getPropertiesByCategory(category);
+      final List<dynamic> props = res['properties'] ?? [];
+
+      final parsedProperties = props
           .whereType<Map<String, dynamic>>()
           .map((p) => Property.fromJson(p))
           .toList();
 
-      setState(() {
-        properties = parsedProperties;
-      });
+      setState(() => properties = parsedProperties);
     } catch (e) {
-      debugPrint('Error fetching properties: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).translate('could_not_fetch_properties'))),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).translate('could_not_fetch_properties'),
+          ),
+        ),
       );
-    } finally { 
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  void searchPropertiesByName(String name) async {
+    if (name.trim().isEmpty) {
+      return;
+    }
+    setState(() {
+      loading = true;
+      // Use a generic title for search results
+      selectedCategory = AppLocalizations.of(context).translate('search_results');
+    });
+
+    try {
+      // Assuming a service method to search properties by name exists.
+      // If not, this would need to be implemented in your CustomerOpsService.
+      final res = await CustomerOpsService.getPropertiesByName(name);
+      final List<dynamic> props = res['properties'] ?? [];
+
+      final parsedProperties =
+          props.whereType<Map<String, dynamic>>().map((p) => Property.fromJson(p)).toList();
+
+      setState(() => properties = parsedProperties);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error searching properties: $e')),
+      );
+    } finally {
       setState(() => loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-    // If no category is selected, show the main home screen.
-    if (selectedCategory == null) {
-      return _buildMainHome();
-    } else {
-      // If a category is selected, show the properties list for that category.
-      return _buildPropertiesList();
-    }
+    return selectedCategory == null
+        ? _buildMainHome()
+        : _buildPropertiesList();
   }
 
-  // Widget for the main home screen with categories
+  // -------------------------------------------------------------
+  // MAIN HOME SCREEN — UPDATED TO MATCH THE STITCH UI
+  // -------------------------------------------------------------
   Widget _buildMainHome() {
     final localizations = AppLocalizations.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Language mapping helper
+    String getLanguageName(Locale locale) {
+      switch (locale.languageCode) {
+        case 'en':
+          return 'English';
+        case 'am':
+          return 'አማርኛ';
+        case 'om':
+          return 'Oromoo';
+        default:
+          return '';
+      }
+    }
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.only(top: 60.0, left: 16.0, right: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '  ${localizations.translate('welcome_to_lmg')}',
-              style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              decoration: InputDecoration(
-                hintText: localizations.translate('search_hint'),
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: LayoutBuilder( // Use LayoutBuilder for better performance in complex layouts
-                builder: (context, constraints) => GridView.count(
-                  crossAxisCount: 2, // Two columns
-                  crossAxisSpacing: 16, // Spacing between columns
-                  mainAxisSpacing: 16, // Spacing between rows
-                  childAspectRatio: 1.5, // Adjust aspect ratio for button size
-                  children: categories.map((categoryMap) {
-                    return ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+          child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Language selector (right aligned)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(Icons.language, size: 20, color: Colors.black87),
+                  const SizedBox(width: 6),
+                  DropdownButton<Locale>(
+                    value: Localizations.localeOf(context),
+                    underline: const SizedBox(),
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    onChanged: (Locale? newLocale) {
+                      if (newLocale != null) {
+                        Provider.of<LanguageProvider>(context, listen: false).changeLocale(newLocale.languageCode);
+                      }
+                    },
+                    items: AppLocalizations.supportedLocales.map((Locale locale) {
+                      return DropdownMenuItem<Locale>(
+                        value: locale,
+                        child: Text(
+                          getLanguageName(locale),
+                          style: const TextStyle(fontSize: 14),
                         ),
-                        padding: const EdgeInsets.all(8),
-                      ),
-                      onPressed: () {
-                        setState(() => selectedCategory = categoryMap['name'] as String);
-                        searchProperties(categoryMap['name'] as String);
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 1),
+
+              // Welcome title
+              Text(
+                "Welcome to LMG Tech",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                  
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Search bar
+              TextField(
+                controller: _searchController,
+                onSubmitted: (value) {
+                  searchPropertiesByName(value);
+                },
+                decoration: InputDecoration(
+                  hintText: localizations.translate('search_hint'),
+                  hintStyle: TextStyle(color: const Color.fromARGB(222, 117, 117, 117), fontSize: 14),
+                  prefixIcon: Icon(Icons.search, color: const Color.fromARGB(255, 149, 162, 237)),
+                  filled: true,
+                  fillColor: const Color.fromARGB(246, 212, 210, 227), // Missing closing bracket was here
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(1),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Guest info box
+              if (!_isLoggedIn)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD), // A soft blue color
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF0D47A1), height: 1.5),
+                      children: [
+                        TextSpan(text: "${localizations.translate('Browsing as Guest')}. "),
+                        TextSpan(
+                          text: localizations.translate('login'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                            color: Color(0xFF1976D2),
+                            fontSize: 15,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () async {
+                              if (widget.onLoginTapped != null) {
+                                await widget.onLoginTapped!();
+                                _checkAuth();
+                              }
+                            },
+                        ),
+                        TextSpan(text: " ${localizations.translate('for full access')}."),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 15),
+
+              // Category Grid (2 x 2)
+              SizedBox(
+                height: 280, 
+              // Adjust this height to make containers smaller
+                child: GridView.builder(
+              
+                  itemCount: categories.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1,
+                  ),
+                  itemBuilder: (context, index) {
+                    final cat = categories[index];
+
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(15),
+                      onTap: () {
+                        setState(() => selectedCategory = cat['name']);
+                        searchProperties(cat['name']);
                       },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(categoryMap['icon'] as IconData, size: 30),
-                          const SizedBox(height: 8),
-                          Text(categoryMap['name'] as String, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
-                        ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color.fromARGB(255, 246, 246, 246),
+                          borderRadius: BorderRadius.circular(15),
+                          
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(cat['icon'], size: 35, color: const Color.fromARGB(255, 7, 116, 225)),
+                            const SizedBox(height: 14),
+                            
+                            Text(
+                              cat['name']
+                                  .replaceAllMapped(
+                                      RegExp(r'([A-Z])'), (m) => ' ${m[1]}')
+                                  .trim(),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Color.fromARGB(221, 8, 106, 219),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
       ),
     );
   }
 
-  // Widget for displaying the list of properties for the selected category.
+  // -------------------------------------------------------------
+  // PROPERTIES LIST SCREEN
+  // -------------------------------------------------------------
   Widget _buildPropertiesList() {
     final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(selectedCategory ?? localizations.translate('properties')),
-        // Back button to return to the main home screen.
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             setState(() {
               selectedCategory = null;
-              properties = []; // Clear properties when going back
+              properties = [];
             });
           },
         ),
@@ -146,29 +323,62 @@ class _HomeTabState extends State<HomeTab> {
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : properties.isEmpty
-              ? Center(child: Text(localizations.translate('no_properties_available')))
+              ? Center(
+                  child: Text(localizations.translate('no_properties_available')),
+                )
               : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(8),
                   itemCount: properties.length,
                   itemBuilder: (context, index) {
-                    final property = properties[index];
-                    return Card(
-                      child: ListTile(
-                        title: Text(property.name),
-                        subtitle: Text(
-                            '${property.category} - ${property.rentalPrice['perDay']} per day'),
-                        trailing: ElevatedButton(
-                          child: Text(localizations.translate('detail')),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PropertyDetailPage(property: property),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                    return PropertyCard(
+                      property: properties[index],
+                      onDetailTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PropertyDetailPage(
+                              property: properties[index],
+                            ),
+                          ),
+                        );
+                      },
+                      onBookNowTap: () async {
+                        final token = await AuthService.getToken();
+                        if (token == null) {
+                          // User is not logged in, show login/register dialog
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text(localizations.translate('authentication_required')),
+                                content: Text(localizations.translate('auth_required_message')),
+                                actions: <Widget>[
+                                  TextButton(
+                                    child: Text(localizations.translate('register')),
+                                    onPressed: () {
+                                      Navigator.of(context).pop(); // Close the dialog
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterPage(property: properties[index])));
+                                    },
+                                  ),
+                                  TextButton(
+                                    child: Text(localizations.translate('login')),
+                                    onPressed: () {
+                                      Navigator.of(context).pop(); // Close the dialog
+                                      Navigator.push(context, MaterialPageRoute(builder: (_) => LoginPage(property: properties[index])));
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        } else {
+                          // User is logged in, proceed to booking
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => PropertyBookingPage(property: properties[index])),
+                          );
+                        }
+                      },
                     );
                   },
                 ),

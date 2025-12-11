@@ -12,6 +12,12 @@ class CustomerOpsService {
     return ApiService.getPublic('customer/properties?category=$category');
   }
 
+  // ===================== GET PROPERTIES BY NAME (SEARCH) =====================
+  static Future<Map<String, dynamic>> getPropertiesByName(String name) async {
+    // This endpoint searches for properties by name across all categories.
+    return ApiService.getPublic('customer/properties/search?name=${Uri.encodeComponent(name)}');
+  }
+
   // ===================== GET MY BOOKINGS =====================
   static Future<Map<String, dynamic>> getMyBookings() async {
     final token = await AuthService.getToken();

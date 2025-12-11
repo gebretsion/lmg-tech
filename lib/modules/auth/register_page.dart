@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/property.dart';
 import '../booking/property_booking_page.dart';
+import '../home/home_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -23,6 +24,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   File? profileImage;
   bool loading = false;
+  bool _isPasswordObscured = true;
 
   Future<void> pickImage() async {
     final image = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -48,15 +50,22 @@ class _RegisterPageState extends State<RegisterPage> {
         address: _addressController.text,
         profilePicture: profileImage,
       );
-          final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('email', _emailController.text.trim());
-    await prefs.setString('password', _passwordController.text.trim());
 
+      // Check if the registration was successful based on the response.
+      // This assumes your service returns a map with a 'success' key.
+      if (res['success'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        // Show the success message from the server
+        if (mounted && res['message'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res['message'])),
+          );
+        }
+        await prefs.setString('email', _emailController.text.trim());
+        await prefs.setString('password', _passwordController.text.trim());
 
-      // Automatically saved token in AuthService, no need to pass to HomePage
-      final token = await AuthService.getToken();
-      if (token != null) {
         if (!mounted) return;
+
         if (widget.property != null) {
           // If a property was passed, replace the register page with the booking page.
           Navigator.pushReplacement(
@@ -64,15 +73,19 @@ class _RegisterPageState extends State<RegisterPage> {
             MaterialPageRoute(builder: (_) => PropertyBookingPage(property: widget.property!)),
           );
         } else {
-          // Pop the page and return true to signal success.
-          Navigator.pop(context, true);
+          // Navigate to the HomePage, which will now handle showing the correct tab.
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const HomePage(initialIndex: 0)),
+            (Route<dynamic> route) => false,
+          );
         }
       } else {
+        // If registration was not successful, show the message from the server.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? 'Registration failed')),
         );
       }
-    } catch (e) { 
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -108,6 +121,20 @@ class _RegisterPageState extends State<RegisterPage> {
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email')),
             TextField(
+                controller: _passwordController,
+                obscureText: _isPasswordObscured,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordObscured ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() => _isPasswordObscured = !_isPasswordObscured);
+                    },
+                  ),
+                )),
+            TextField(
                 controller: _phoneController,
                 decoration: const InputDecoration(labelText: 'Phone')),
             TextField(
@@ -117,10 +144,7 @@ class _RegisterPageState extends State<RegisterPage> {
             TextField(
                 controller: _addressController,
                 decoration: const InputDecoration(labelText: 'Address')),
-            TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password')),
+            
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: loading ? null : register,

@@ -107,16 +107,21 @@ class MyBookingsPageState extends State<MyBookingsPage> {
                       final booking = bookings[i];
                       return ListTile(
                         leading: booking.imageUrls.isNotEmpty
-                            ? Image.network(
-                                booking.imageUrls.first,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              )
+                            ? Image.network(booking.imageUrls.first,
+                                width: 50, height: 50, fit: BoxFit.cover)
                             : const Icon(Icons.image_not_supported),
                         title: Text(booking.assetName, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text('Status: ${booking.status}\nTotal: \$${booking.totalPrice.toStringAsFixed(2)}\nBooked: ${booking.startDate.toLocal().toString().split(' ')[0]} to ${booking.endDate.toLocal().toString().split(' ')[0]}'),
-                        onTap: () {
+                        trailing: TextButton(
+                          child: Text(localizations.translate('detail')),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
+                            );
+                          },
+                        ),
+                        onTap: () { // Keep onTap for general card interaction if desired
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),

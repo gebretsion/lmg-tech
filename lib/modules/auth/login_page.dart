@@ -3,6 +3,7 @@ import 'package:lmg_app/data/models/property.dart';
 import 'package:lmg_app/modules/booking/property_booking_page.dart';
 import '../../data/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../home/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   final Property? property;
@@ -16,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool loading = false;
+  bool _isPasswordObscured = true;
 
   @override
   void initState() {
@@ -57,8 +59,11 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => PropertyBookingPage(property: widget.property!)),
         );
       } else {
-        // Pop the page and return true to signal success.
-        Navigator.pop(context, true);
+        // Navigate to the HomePage, which will now handle showing the correct tab.
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage(initialIndex: 0)),
+          (Route<dynamic> route) => false,
+        );
       }
     } else {
       debugPrint('Login failed: ${res['message']}');
@@ -105,8 +110,18 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 12),
             TextField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
+              obscureText: _isPasswordObscured,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordObscured ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() => _isPasswordObscured = !_isPasswordObscured);
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
