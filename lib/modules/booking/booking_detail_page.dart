@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../data/models/booking.dart';
+import '../../data/services/customer_ops_service.dart';
 
-class BookingDetailPage extends StatelessWidget {
+class BookingDetailPage extends StatefulWidget {
   final Booking booking;
 
   const BookingDetailPage({super.key, required this.booking});
 
   @override
+  State<BookingDetailPage> createState() => _BookingDetailPageState();
+}
+
+class _BookingDetailPageState extends State<BookingDetailPage> {
+  bool _isUploading = false;
+
+  @override
   Widget build(BuildContext context) {
+    final booking = widget.booking;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Booking Details'),
@@ -68,6 +79,21 @@ class BookingDetailPage extends StatelessWidget {
             _buildDetailRow('Name:', booking.bookedBy['name'] ?? 'N/A'),
             _buildDetailRow('Email:', booking.bookedBy['email'] ?? 'N/A'),
             _buildDetailRow('Phone:', (booking.bookedBy['phone'] ?? 'N/A').toString()),
+            const SizedBox(height: 24),
+            Center(
+              child: _isUploading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton.icon(
+                      onPressed: () => _uploadPaymentProof(context),
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Choose File (Upload Receipt)'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -89,5 +115,34 @@ class BookingDetailPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _uploadPaymentProof(BuildContext context) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() => _isUploading = true);
+      try {
+        final File file = File(pickedFile.path);
+        final res = await CustomerOpsService.uploadPaymentProof(
+          bookingId: widget.booking.bookingId,
+          paymentProof: file,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res['message'] ?? 'Uploaded successfully')),
+          );
+          setState(() {});
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => _isUploading = false);
+      }
+    }
   }
 }

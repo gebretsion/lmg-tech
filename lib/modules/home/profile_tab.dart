@@ -45,7 +45,7 @@ class _ProfileTabState extends State<ProfileTab> {
     try {
       // Load local cached user first
       final localUser = await AuthService.getUser();
-      if (localUser != null) {
+      if (mounted && localUser != null) {
         setState(() {
           _profileData = localUser;
           _updateControllers();
@@ -56,16 +56,18 @@ class _ProfileTabState extends State<ProfileTab> {
       final apiData = await CustomerOpsService.getProfile();
       final fetchedUser = User.fromJson(apiData);
 
-      setState(() {
-        _profileData = fetchedUser;
-        _updateControllers();
-      });
+      if (mounted) {
+        setState(() {
+          _profileData = fetchedUser;
+          _updateControllers();
+        });
+      }
 
       await AuthService.saveUser(fetchedUser);
     } catch (e) {
-      setState(() => _error = "Failed to fetch profile: $e");
+      if (mounted) setState(() => _error = "Failed to fetch profile: $e");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -85,7 +87,7 @@ class _ProfileTabState extends State<ProfileTab> {
     );
 
     if (image != null) {
-      setState(() => _profileImageFile = File(image.path));
+      if (mounted) setState(() => _profileImageFile = File(image.path));
     }
   }
 
@@ -104,12 +106,14 @@ class _ProfileTabState extends State<ProfileTab> {
       // Backend returns: { message, updatedCustomer: {...} }
       final updatedUser = User.fromJson(res['updatedCustomer']);
 
-      setState(() {
-        _profileData = updatedUser;
-        _updateControllers();
-        _isEditing = false;
-        _profileImageFile = null;
-      });
+      if (mounted) {
+        setState(() {
+          _profileData = updatedUser;
+          _updateControllers();
+          _isEditing = false;
+          _profileImageFile = null;
+        });
+      }
 
       await AuthService.saveUser(updatedUser);
 
@@ -125,7 +129,7 @@ class _ProfileTabState extends State<ProfileTab> {
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

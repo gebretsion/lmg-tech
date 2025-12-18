@@ -25,11 +25,12 @@ dependencies:
   flutter_dotenv: ^5.1.0
   file_picker: ^8.1.2
   cached_network_image: ^3.2.3
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.10.0
+  flutter_launcher_icons: ^0.13.1
   flutter_lints: ^5.0.0
 flutter_icons:
   android: true
@@ -46,5 +47,5 @@ flutter:
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-SemiBold.ttf
+        - asset: assets/fonts/Poppins-ExtraBold.ttf
           weight: 600

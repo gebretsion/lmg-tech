@@ -6,6 +6,9 @@ import 'package:lmg_app/data/models/user.dart'; // Import the User model
 import '../../core/config/app_config.dart';
 
 const String _userKey = 'current_user';
+const String _emailKey = 'saved_email';
+const String _passwordKey = 'saved_password';
+const String _rememberMeKey = 'remember_me';
 
 class AuthService {
   // ===================== REGISTER =====================
@@ -39,6 +42,9 @@ class AuthService {
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = jsonDecode(response.body); // Decode once
+      if (data['token'] != null) await storeToken(data['token']);
+      if (data['user'] != null) await saveUser(User.fromJson(data['user']));
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to register: ${response.body}');
@@ -58,13 +64,8 @@ class AuthService {
     );
 
     if (res.statusCode >= 200 && res.statusCode < 300) {
-      final data = jsonDecode(res.body);
-
-      // Save token in shared preferences
-      if (data['token'] != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('jwt_token', data['token']);
-      }
+      final data = jsonDecode(res.body); // Decode once
+      if (data['token'] != null) await storeToken(data['token']);
       // Save user data
       if (data['user'] != null) {
         await saveUser(User.fromJson(data['user']));
@@ -80,10 +81,36 @@ class AuthService {
     }
   }
   
+  // ===================== GOOGLE SIGN IN =====================
+  static Future<Map<String, dynamic>> signInWithGoogle(String idToken) async {
+    // Adjust the endpoint if your backend uses a different path
+    final uri = Uri.parse('${AppConfig.baseUrl}/customer/google-login');
+    final res = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': idToken}),
+    );
+
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final data = jsonDecode(res.body);
+      if (data['token'] != null) await storeToken(data['token']);
+      if (data['user'] != null) await saveUser(User.fromJson(data['user']));
+      return data;
+    } else {
+      throw Exception('Failed to login with Google: ${res.body}');
+    }
+  }
+
   // ===================== GET SAVED TOKEN =====================
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('jwt_token');
+  }
+
+  // ===================== STORE TOKEN =====================
+  static Future<void> storeToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('jwt_token', token);
   }
 
   // ===================== SAVE USER DATA =====================
@@ -106,5 +133,29 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token'); // remove token on logout
     await prefs.remove(_userKey); // remove user data on logout
+  }
+
+  // ===================== SAVE LOGIN INFO =====================
+  static Future<void> saveLoginInfo(String email, String password, bool remember) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (remember) {
+      await prefs.setString(_emailKey, email);
+      await prefs.setString(_passwordKey, password);
+      await prefs.setBool(_rememberMeKey, true);
+    } else {
+      await prefs.remove(_emailKey);
+      await prefs.remove(_passwordKey);
+      await prefs.setBool(_rememberMeKey, false);
+    }
+  }
+
+  // ===================== GET LOGIN INFO =====================
+  static Future<Map<String, dynamic>> getLoginInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'email': prefs.getString(_emailKey) ?? '',
+      'password': prefs.getString(_passwordKey) ?? '',
+      'rememberMe': prefs.getBool(_rememberMeKey) ?? false,
+    };
   }
 }
