@@ -27,13 +27,13 @@ class _HomePageState extends State<HomePage> {
 
   }
 
-  Future<void> _checkAuthStatus({bool navigateToHome = false}) async {
+  Future<void> _checkAuthStatus({bool navigateToHome = false}) async { // Accept the flag
     final token = await AuthService.getToken();
     if (mounted) {
       setState(() {
         _isLoggedIn = token != null;
         _buildTabs();
-        if (navigateToHome && _isLoggedIn) {
+        if (navigateToHome && _isLoggedIn) { // Use the flag here
           _selectedIndex = 0; // Navigate to HomeTab
         }
       });
@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
       HomeTab(onLoginTapped: () async => _onItemTapped(2)),
       MyBookingsPage(key: ValueKey<bool>(_isLoggedIn)), // Add a key to force rebuild on auth change
       _isLoggedIn
-          ? ProfileTab(onLogout: () => _checkAuthStatus())
+          ? ProfileTab(onLogout: () => _checkAuthStatus(navigateToHome: true))
           : LoginTab(onLoginSuccess: () => _checkAuthStatus(navigateToHome: true)), 
     ];
   }

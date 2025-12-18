@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:lmg_app/data/services/api_service.dart';
 import '../../core/config/app_config.dart';
 import 'auth_service.dart';
@@ -39,6 +40,30 @@ class CustomerOpsService {
     return ApiService.post('booking/create', bookingData, token: token);
   }
 
+  // ===================== DELETE BOOKING =====================
+  static Future<dynamic> deleteBooking(dynamic bookingId) async {
+    final token = await AuthService.getToken();
+    if (token == null) throw Exception('No token found. Please login first.');
+
+    final uri = Uri.parse('${AppConfig.baseUrl}/customer/bookings/$bookingId');
+    final response = await http.delete(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.body.isNotEmpty ? jsonDecode(response.body) : {};
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Unauthorized: Please login again.');
+    }
+    throw Exception('Failed to delete booking: ${response.body}');
+  }
+
   // ===================== UPLOAD PAYMENT PROOF =====================
   static Future<Map<String, dynamic>> uploadPaymentProof({
     required String bookingId,
@@ -50,13 +75,23 @@ class CustomerOpsService {
     final uri = Uri.parse('${AppConfig.baseUrl}/customer/bookings/$bookingId/payment-proof');
     var request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(await http.MultipartFile.fromPath('paymentProof', paymentProof.path));
+    
+    // Explicitly set the content type to ensure the backend recognizes it as an image
+    final contentType = paymentProof.path.toLowerCase().endsWith('.png') 
+        ? MediaType('image', 'png') 
+        : MediaType('image', 'jpeg');
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'paymentProof', 
+      paymentProof.path,
+      contentType: contentType,
+    ));
 
     final streamedResponse = await request.send();
     final res = await http.Response.fromStream(streamedResponse);
 
-    if (res.statusCode == 401) await ApiService.post('customer/bookings/$bookingId/payment-proof', {}); // To trigger handler
-    if (res.statusCode >= 200 && res.statusCode < 300) return ApiService.post('customer/bookings/$bookingId/payment-proof', {});
+    if (res.statusCode == 401) throw Exception('Unauthorized: Please login again.');
+    if (res.statusCode >= 200 && res.statusCode < 300) return jsonDecode(res.body);
     throw Exception('Failed to upload payment proof: ${res.body}');
   }
 

@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lmg_app/modules/home/home_page.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/models/property.dart';
 import '../booking/property_booking_page.dart';
-import '../home/home_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../routes/app_routes.dart'; // Import AppRoutes for navigation
 
 class RegisterPage extends StatefulWidget {
   final Property? property;
@@ -38,11 +38,22 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
+
+    final email = _emailController.text.trim();
+    final emailRegex = RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+
+    if (!emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email address')),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
       final res = await AuthService.register(
-        email: _emailController.text,
+        email: email,
         password: _passwordController.text,
         fullName: _fullNameController.text,
         phonenumber: _phoneController.text,
@@ -51,19 +62,15 @@ class _RegisterPageState extends State<RegisterPage> {
         profilePicture: profileImage,
       );
 
-      // Check if the registration was successful based on the response.
-      // This assumes your service returns a map with a 'success' key.
-      if (res['success'] == true) {
-        final prefs = await SharedPreferences.getInstance();
+      // If AuthService.register completes without throwing an exception, it's successful.
+      // The AuthService.register method now handles saving the token and user data.
+      if (res != null) { // res will not be null if no exception was thrown
         // Show the success message from the server
-        if (mounted && res['message'] != null) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(res['message'])),
           );
         }
-        await prefs.setString('email', _emailController.text.trim());
-        await prefs.setString('password', _passwordController.text.trim());
-
         if (!mounted) return;
 
         if (widget.property != null) {
@@ -87,8 +94,12 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (mounted) {
+        String message = 'Error: $e';
+        if (e is SocketException) {
+          message = 'Network error: Check your internet connection or server URL.';
+        }
         ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+          .showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       setState(() => loading = false);

@@ -61,6 +61,10 @@ class PropertyCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: onBookNowTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 143, 198, 145),
+                    foregroundColor: Colors.white,
+                  ),
                   child: Text(localizations.translate('book_now')),
                 ),
               ],

@@ -19,6 +19,7 @@ class Property {
   final String name;
   final String description;
   final String category;
+  final String? subCategory; // Added for 'Other' category
   final String priceUnit;
   final Map<String, dynamic> rentalPrice;
   final int numberOfProperty;
@@ -32,6 +33,7 @@ class Property {
     required this.name,
     required this.description,
     required this.category,
+    this.subCategory,
     required this.priceUnit,
     required this.rentalPrice,
     required this.numberOfProperty,
@@ -46,6 +48,7 @@ class Property {
         name: json['name'],
         description: json['description'],
         category: json['category'],
+        subCategory: json['subCategory'],
         priceUnit: json['priceUnit'] ?? 'N/A',
         rentalPrice: json['rentalPrice'],
         numberOfProperty: json['numberOfProperty'],
@@ -62,6 +65,7 @@ class Property {
         'name': name,
         'description': description,
         'category': category,
+        'subCategory': subCategory,
         'priceUnit': priceUnit,
         'rentalPrice': rentalPrice,
         'numberOfProperty': numberOfProperty,

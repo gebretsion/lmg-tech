@@ -92,10 +92,14 @@ class PropertyDetailPage extends StatelessWidget {
                   final booking = property.bookings[index];
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: ListTile(
-                      title: Text(localizations.translate('booking_from_to').replaceAll('{startDate}', booking.startDate.split('T')[0]).replaceAll('{endDate}', booking.endDate.split('T')[0])),
-                      subtitle: Text(localizations.translate('booking_status_units').replaceAll('{status}', booking.status).replaceAll('{units}', booking.numberOfProperty.toString())),
-                    ),
+                    child: ListTile( 
+                      title: Text( 
+                        localizations.translate('booking_from_to') 
+                          .replaceAll('{startDate}', DateTime.parse(booking.startDate).toLocal().toString().substring(0, 16)) 
+                          .replaceAll('{endDate}', DateTime.parse(booking.endDate).toLocal().toString().substring(0, 16)), 
+                      ), 
+                      subtitle: Text(localizations.translate('booking_status_units').replaceAll('{status}', booking.status).replaceAll('{units}', booking.numberOfProperty.toString())), 
+                    ), 
                   );
                 },
               ),

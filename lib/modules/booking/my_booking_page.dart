@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../data/services/customer_ops_service.dart';
 import '../../core/localization/localization.dart';
 import '../../data/services/auth_service.dart';
@@ -112,14 +114,24 @@ class MyBookingsPageState extends State<MyBookingsPage> {
                             : const Icon(Icons.image_not_supported),
                         title: Text(booking.assetName, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text('Status: ${booking.status}\nTotal: \$${booking.totalPrice.toStringAsFixed(2)}\nBooked: ${booking.startDate.toLocal().toString().split(' ')[0]} to ${booking.endDate.toLocal().toString().split(' ')[0]}'),
-                        trailing: TextButton(
-                          child: Text(localizations.translate('detail')),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
-                            );
-                          },
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.upload_file, color: Colors.blue),
+                              tooltip: 'Upload Payment Proof',
+                              onPressed: () => _uploadPaymentProof(booking),
+                            ),
+                            TextButton(
+                              child: Text(localizations.translate('detail')),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                         onTap: () { // Keep onTap for general card interaction if desired
                           Navigator.push(
@@ -127,10 +139,73 @@ class MyBookingsPageState extends State<MyBookingsPage> {
                             MaterialPageRoute(builder: (_) => BookingDetailPage(booking: booking)),
                           );
                         },
+                        onLongPress: () => _deleteBooking(booking),
                         isThreeLine: true,
                       );
                     },
                   ),
     );
+  }
+  
+  Future<void> _uploadPaymentProof(Booking booking) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() => loading = true);
+      try {
+        final File file = File(pickedFile.path);
+        final res = await CustomerOpsService.uploadPaymentProof(
+          bookingId: booking.bookingId,
+          paymentProof: file,
+        );
+
+        if (mounted) {
+          final message = res['message'] ?? 'Uploaded successfully';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+          loadBookings(); // Refresh to show updated status
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        }
+      } finally {
+        if (mounted) setState(() => loading = false);
+      }
+    }
+  }
+
+  Future<void> _deleteBooking(Booking booking) async {
+    final localizations = AppLocalizations.of(context);
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.translate('delete')),
+        content: Text(localizations.translate('confirm delete booking')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(localizations.translate('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(localizations.translate('delete'), style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => loading = true);
+      try {
+        await CustomerOpsService.deleteBooking(booking.bookingId);
+        if (mounted) loadBookings();
+      } catch (e) {
+        if (mounted) setState(() => loading = false);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 }
